@@ -1,3 +1,5 @@
 
 .ipynb_checkpoints/ALeRCE_Hito_1-checkpoint.ipynb
 *.ipynb
+__pycache__/features_packs.cpython-37.pyc
+.DS_Store
