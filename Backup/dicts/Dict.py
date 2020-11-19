@@ -1,0 +1,20 @@
+Dict = {
+   "AGN": "AGN",
+   "Blazar": "Blazar",
+   "CV/Nova": "CV/Nova",
+   "SNIa": "SNIa",
+   "SNIbc": "SNIbc",
+   "SNII": "SNII",
+   "SNIIn": "SNII",
+   "SLSN": "SLSN",
+   "EA": "E",
+   "EB/EW": "E",
+   "DSCT": "DSCT",
+   "RRL": "RRL",
+   "Ceph": "CEP",
+   "LPV": "LPV",
+   "Periodic-Other": "Periodic-Other",
+   "QSO": "QSO",
+   "YSO": "YSO",
+   "RSCVn": "Periodic-Other"
+ }
