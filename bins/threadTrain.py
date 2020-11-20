@@ -5,14 +5,44 @@ from imblearn.ensemble import BalancedRandomForestClassifier
 import threading
 import time
 import os
+import sys
 
 Accuracy = []
+F1 = []
+Recall = []
+Precision = []
+
+train_size = 0
+complete = 0
+
+def update_status():
+	global complete 
+	complete += 1
+	update_progress(complete/train_size)
+
+def update_progress(progress):
+    barLength = 40
+    status = ""
+    if isinstance(progress, int):
+        progress = float(progress)
+    if not isinstance(progress, float):
+        progress = 0
+        status = "error: progress var must be float\r\n"
+    if progress < 0:
+        progress = 0
+        status = "Halt...\r\n"
+    if progress >= 1:
+        progress = 1
+        status = "Done...\r\n"
+    block = int(round(barLength*progress))
+    text = "\rComputing: [{0}] {1}% {2}".format( "#"*block + "-"*(barLength-block), int(progress*100), status)
+    sys.stdout.write(text)
+    sys.stdout.flush()
 
 def single_thread_train(thread_name, model, thread_args, dataset):
-	print("Training {}".format(thread_name))
+	print("{} launched".format(thread_name))
 	T = time.time()
 	for value in thread_args[0]:
-		
 		model = BalancedRandomForestClassifier(
             			n_estimators=500,
             			max_features='auto',
@@ -27,9 +57,15 @@ def single_thread_train(thread_name, model, thread_args, dataset):
 		X_train, X_test, y_train, y_test = train_test_split(dataset[elements], dataset['classALeRCE'], test_size=0.33, random_state=42)
 		model.fit(X_train, y_train)
 		y_pred = model.predict(X_test)
-		a_score = accuracy_score(y_test, y_pred)
-		Accuracy.append((value, a_score))
-		print('Process {}, done!'.format(value))
+		precision = precision_score(y_test, y_pred, average = 'weighted')
+		recall = recall_score(y_test, y_pred, average = 'weighted')
+		f1 = f1_score(y_test, y_pred, average = 'weighted')
+		accuracy = accuracy_score(y_test, y_pred)
+		Accuracy.append((value, accuracy))
+		F1.append((value, f1))
+		Recall.append((value, recall))
+		Precision.append((value, precision))
+		update_status()
 	deltaT = time.time() - T
 	print("Finished {} in {} seconds".format(thread_name, deltaT))
 
@@ -45,6 +81,8 @@ def threaded_train(model, dataset, n_jobs = -1, rank = None):
 	if rank == None:
 		return -1
 	block_size = len(rank)//n_jobs
+	global train_size
+	train_size = len(rank)
 	thread_args = (range(2, block_size), rank)
 	args = ('Thread {}'.format(1), model, thread_args, dataset)
 	Threads.append(threading.Thread(target=single_thread_train, args=args))
@@ -58,6 +96,7 @@ def threaded_train(model, dataset, n_jobs = -1, rank = None):
 	args = ('Thread {}'.format(n_jobs), model, thread_args, dataset)
 	Threads.append(threading.Thread(target=single_thread_train, args=args))
 	Threads[-1].start()
+	update_progress(0)
 	for i in range(n_jobs):
 		Threads[i].join()
-	return Accuracy
+	return Accuracy, Precision, Recall, F1
