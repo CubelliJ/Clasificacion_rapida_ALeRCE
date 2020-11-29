@@ -14,9 +14,9 @@ def order(data):
 		ret.append(val.pop(am))
 	return ret
 
-def get_tree_data(dataset, ImportanceRank, train=False):
+def get_tree_data(dataset, ImportanceRank, train=False, pack_dict=None):
 	if train:
-		ret = tt(None, dataset, n_jobs=-1, rank=ImportanceRank)
+		ret = tt(None, dataset, n_jobs=-1, pack_dict, rank=ImportanceRank)
 		if ret == -1: 
 			raise Exception('No rank, please insert rank and try again')
 		ThreadAccuracy, ThreadPrecision, ThreadRecall, Threadf1 = ret

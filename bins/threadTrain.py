@@ -39,37 +39,43 @@ def update_progress(progress):
     sys.stdout.write(text)
     sys.stdout.flush()
 
-def single_thread_train(thread_name, model, thread_args, dataset):
-	print("{} launched".format(thread_name))
-	T = time.time()
-	for value in thread_args[0]:
-		model = BalancedRandomForestClassifier(
-            			n_estimators=500,
-            			max_features='auto',
-            			max_depth=None,
-            			n_jobs=-1,
-            			class_weight=None,
-            			criterion='entropy',
-            			min_samples_split=2,
-            			min_samples_leaf=1)
-	
-		elements = thread_args[1][:value]
-		X_train, X_test, y_train, y_test = train_test_split(dataset[elements], dataset['classALeRCE'], test_size=0.33, random_state=42)
-		model.fit(X_train, y_train)
-		y_pred = model.predict(X_test)
-		precision = precision_score(y_test, y_pred, average = 'weighted')
-		recall = recall_score(y_test, y_pred, average = 'weighted')
-		f1 = f1_score(y_test, y_pred, average = 'weighted')
-		accuracy = accuracy_score(y_test, y_pred)
-		Accuracy.append((value, accuracy))
-		F1.append((value, f1))
-		Recall.append((value, recall))
-		Precision.append((value, precision))
-		update_status()
-	deltaT = time.time() - T
-	print("Finished {} in {} seconds".format(thread_name, deltaT))
+def single_thread_train(thread_name, model, thread_args, dataset, pack_dict):
+    print("{} launched".format(thread_name))
+    T = time.time()
+    for value in thread_args[0]:
+        model = BalancedRandomForestClassifier(
+                n_estimators=500,
+                max_features='auto',
+                max_depth=None,
+                n_jobs=-1,
+                class_weight=None,
+                criterion='entropy',
+                min_samples_split=2,
+            	min_samples_leaf=1)
+        if pack_dict==None:
+            elements = thread_args[1][:value]
+        else:
+            p_elements = thread_args[1][:value] # Supongo que esto retorna los elementos del pack de features.
+            elements = []
+            for i in p_elements: # Se toma cada pack, y se agrega a elements cada feature.
+                for j in range(len(pack_dict[i])-1): # Ultimo elemento corresponde a tiempo de computo del pack de features, no a una feature.
+                    elements.append(pack_dict[i][j])
+        X_train, X_test, y_train, y_test = train_test_split(dataset[elements], dataset['clxsassALeRCE'], test_size=0.33, random_state=42)
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+        precision = precision_score(y_test, y_pred, average = 'weighted')
+        recall = recall_score(y_test, y_pred, average = 'weighted')
+        f1 = f1_score(y_test, y_pred, average = 'weighted')
+        accuracy = accuracy_score(y_test, y_pred)
+        Accuracy.append((value, accuracy))
+        F1.append((value, f1))
+        Recall.append((value, recall))
+        Precision.append((value, precision))
+        update_status()
+        deltaT = time.time() - T
+    print("Finished {} in {} seconds".format(thread_name, deltaT))
 
-def threaded_train(model, dataset, n_jobs = -1, rank = None): 
+def threaded_train(model, dataset, n_jobs = -1, pack_dict, rank = None): 
 	seconds = time.time()
 	print('Started at:', time.ctime(seconds), '\n')
 	Threads = []
@@ -78,7 +84,7 @@ def threaded_train(model, dataset, n_jobs = -1, rank = None):
 		raise Exception("Invalid n_jobs, must be -1 for all or bigger than 0")
 	if n_jobs == -1 or n_jobs >= count:
 		n_jobs = count
-	if rank == None:
+	if rank == None:  
 		return -1
 	block_size = len(rank)//n_jobs
 	global train_size
@@ -88,11 +94,11 @@ def threaded_train(model, dataset, n_jobs = -1, rank = None):
 	Threads.append(threading.Thread(target=single_thread_train, args=args))
 	Threads[0].start()  
 	for i in range(1, n_jobs - 1):
-		thread_args = (range(i*block_size,(i+1)*block_size), rank)
+		thread_args = (range(i*block_size,(i+1)*block_size), rank, pack_dict) # Se agrega a los argumentos el pack_dict (diccionario que relaciona pack con features y tiempo).
 		args = ('Thread {}'.format(i + 1), model, thread_args, dataset)
 		Threads.append(threading.Thread(target=single_thread_train, args=args))
 		Threads[i].start()   
-	thread_args = (range((n_jobs - 1)*block_size, len(rank)), rank)
+	thread_args = (range((n_jobs - 1)*block_size, len(rank)), rank, pack_dict) # Se agrega a los argumentos el pack_dict (diccionario que relaciona pack con features y tiempo).
 	args = ('Thread {}'.format(n_jobs), model, thread_args, dataset)
 	Threads.append(threading.Thread(target=single_thread_train, args=args))
 	Threads[-1].start()
