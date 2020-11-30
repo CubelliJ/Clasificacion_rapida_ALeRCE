@@ -94,6 +94,6 @@ def get_dataset(Joaquin):
 
     dataset = dataset[dataset.classALeRCE.isin(classes)]
 
-    dataset.to_csv('ALeRCE.csv')
+    dataset.to_csv('../ALeRCE.csv')
 
     return dataset
